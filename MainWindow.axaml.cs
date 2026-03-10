@@ -30,14 +30,14 @@ public partial class MainWindow : Window
         {
             string rawKey = e.Data.KeyCode.ToString().Replace("Vc", "");
         
-            // IMPROVED FORMATTING HERE
+            
             string formattedKey = rawKey switch
             {
                 "Space" => " ",
                 "Enter" => "\n[ENTER]\n",
                 "Backspace" => "[BACKSPACE]",
                 "Tab" => "\t",
-                "LeftShift" or "RightShift" => "", // Ignore shift keys to keep logs clean
+                "LeftShift" or "RightShift" => "", 
                 "Delete" => "[DEL]",
                 _ => rawKey
             };
@@ -53,7 +53,7 @@ public partial class MainWindow : Window
 
             Dispatcher.UIThread.InvokeAsync(() =>
             {
-                // This updates the screen in Keylogger99
+                
                 KeyLogDisplay.Text += formattedKey;
                 StatusLabel.Text = $"Status: Recording to {_currentLogFile}";
                 StatusLabel.Foreground = Avalonia.Media.Brushes.Green;
@@ -67,16 +67,16 @@ public partial class MainWindow : Window
     {
         if (_hook != null && _hook.IsRunning)
         {
-            // 1. Actually stop the hardware listener
+            
             _hook.Dispose(); 
         
-            // 2. Change the UI so YOU can see it stopped
+            
             Dispatcher.UIThread.InvokeAsync(() => {
                 StatusLabel.Text = "Status: STOPPED (Not Recording)";
                 StatusLabel.Foreground = Avalonia.Media.Brushes.Red; // Turns the text red
             });
 
-            // 3. Optional: Add a final line to the log file
+            
             System.IO.File.AppendAllText(_currentLogFile, "\n--- Session Manually Stopped ---\n");
         }
     }
